@@ -7,26 +7,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type UserNoPass struct {
-	ID    int    `json:"id"`
-	Name  string `json:"name"`
-	Email string `json:"email"`
-}
-
-// Me controller
 func Me(c *gin.Context) {
-	userId := c.Keys["userId"].(model.User).ID
-	user, err := model.FindOneBy(model.User{ID: userId})
-
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	var newUserNoPass UserNoPass
-	newUserNoPass.ID = user.ID
-	newUserNoPass.Name = user.Name
-	newUserNoPass.Email = user.Email
-
+	user := c.Keys["user"].(*model.User)
+	newUserNoPass := model.RemovePassword(*user)
 	c.JSON(http.StatusOK, gin.H{"user": newUserNoPass})
 }

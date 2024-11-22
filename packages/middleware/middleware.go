@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"example/web-service-gin/packages/helper"
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -9,14 +10,20 @@ import (
 
 func JWTAuthMiddleware() gin.HandlerFunc {
 	return func(context *gin.Context) {
+		fmt.Println("jwt auth middleware")
 		err := helper.ValidateJWT(context)
 		if err != nil {
-			context.JSON(http.StatusUnauthorized, gin.H{"error": "Access token required"})
+			context.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 			context.Abort()
 			return
 		}
-		user, _ := helper.CurrentUser(context)
-		context.Set("userId", user.ID)
+		user, err := helper.CurrentUser(context)
+		if err != nil {
+			context.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+			context.Abort()
+			return
+		}
+		context.Set("user", user)
 		context.Next()
 	}
 }

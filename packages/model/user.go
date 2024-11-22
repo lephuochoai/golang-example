@@ -2,7 +2,6 @@ package model
 
 import (
 	"example/web-service-gin/packages/database"
-	"fmt"
 	"html"
 	"strings"
 
@@ -11,10 +10,18 @@ import (
 )
 
 type User struct {
-	ID       int    `json:"id"`
+	gorm.Model
 	Name     string `json:"name"`
 	Email    string `json:"email"`
 	Password string `json:"password"`
+	IsActive bool   `json:"isActive" gorm:"default:true"`
+}
+
+type UserNoPass struct {
+	gorm.Model
+	Name     string `json:"name"`
+	Email    string `json:"email"`
+	IsActive bool   `json:"isActive"`
 }
 
 func (user *User) Save() (*User, error) {
@@ -36,17 +43,23 @@ func (user *User) BeforeSave(*gorm.DB) error {
 	return nil
 }
 
-func FindOneBy(query interface{}) (User, error) {
-	var user User
+func FindOneUserBy(query interface{}) (*User, error) {
+	var user *User
 	err := database.Database.Where(query).First(&user).Error
 	if err != nil {
-		return User{}, err
+		return nil, err
 	}
 	return user, nil
 }
 
 func (user *User) ValidatePassword(password string) error {
-	fmt.Println([]byte(password))
-	fmt.Println([]byte(user.Password))
 	return bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
+}
+
+func RemovePassword(user User) UserNoPass {
+	return UserNoPass{
+		Name:     user.Name,
+		Email:    user.Email,
+		IsActive: user.IsActive,
+	}
 }

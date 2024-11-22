@@ -18,7 +18,9 @@ func init() {
 	database.Connect()
 
 	database.Database.AutoMigrate(&model.User{})
-	// database.Database.AutoMigrate(&model.Entry{})
+	database.Database.AutoMigrate(&model.Project{})
+	database.Database.AutoMigrate(&model.Task{})
+	database.Database.AutoMigrate(&model.Tag{})
 }
 
 func main() {
@@ -33,6 +35,15 @@ func main() {
 	protectedRoutes := router.Group("/api")
 	protectedRoutes.Use(middleware.JWTAuthMiddleware())
 	protectedRoutes.GET("/me", controller.Me)
+
+	protectedRoutes.GET("/projects", controller.Projects)
+	protectedRoutes.POST("/project", controller.CreateProject)
+
+	protectedRoutes.POST("/tags", controller.CreateTag)
+	protectedRoutes.POST("/tag", controller.CreateTag)
+
+	protectedRoutes.GET("/tasks", controller.FindPaginateTask)
+	protectedRoutes.POST("/task", controller.CreateTask)
 
 	router.Run(":8080")
 }

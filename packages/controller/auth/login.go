@@ -16,7 +16,7 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	userExist, err := model.FindOneBy(model.User{Email: input.Email})
+	userExist, err := model.FindOneUserBy(model.User{Email: input.Email})
 	if (err != nil) || (userExist.ID == 0) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -35,5 +35,5 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"token": accessToken})
+	c.JSON(http.StatusOK, gin.H{"access_token": accessToken})
 }

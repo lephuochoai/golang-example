@@ -11,11 +11,12 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v4"
+	"gorm.io/gorm"
 )
 
 var privateKey = []byte(os.Getenv("JWT_PRIVATE_KEY"))
 
-func GenerateJWT(user model.User) (string, error) {
+func GenerateJWT(user *model.User) (string, error) {
 	tokenTTL, _ := strconv.Atoi(os.Getenv("TOKEN_TTL"))
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"id":  user.ID,
@@ -37,24 +38,41 @@ func ValidateJWT(context *gin.Context) error {
 	return errors.New("invalid token provided")
 }
 
-func CurrentUser(context *gin.Context) (model.User, error) {
+func CurrentUser(context *gin.Context) (*model.User, error) {
 	err := ValidateJWT(context)
 	if err != nil {
-		return model.User{}, err
+		return nil, err
 	}
-	token, _ := getToken(context)
-	claims, _ := token.Claims.(jwt.MapClaims)
-	userId := int(claims["id"].(float64))
 
-	user, err := model.FindOneBy(model.User{ID: userId})
+	token, err := getToken(context)
 	if err != nil {
-		return model.User{}, err
+		return nil, err
+	}
+
+	claims, _ := token.Claims.(jwt.MapClaims)
+	userId := uint(claims["id"].(float64))
+	endAt := uint(claims["eat"].(float64))
+
+	if time.Now().Unix() >= int64(endAt) {
+		return nil, errors.New("token expired")
+	}
+
+	user, err := model.FindOneUserBy(model.User{
+		Model: gorm.Model{ID: userId},
+	})
+
+	if err != nil {
+		return nil, err
 	}
 	return user, nil
 }
 
 func getToken(context *gin.Context) (*jwt.Token, error) {
-	tokenString := getTokenFromRequest(context)
+	tokenString, err := getTokenFromRequest(context)
+	if err != nil {
+		return nil, err
+	}
+
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
@@ -65,11 +83,11 @@ func getToken(context *gin.Context) (*jwt.Token, error) {
 	return token, err
 }
 
-func getTokenFromRequest(context *gin.Context) string {
+func getTokenFromRequest(context *gin.Context) (string, error) {
 	bearerToken := context.Request.Header.Get("Authorization")
 	splitToken := strings.Split(bearerToken, " ")
 	if len(splitToken) == 2 && splitToken[0] == "Bearer" {
-		return splitToken[1]
+		return splitToken[1], nil
 	}
-	return ""
+	return "", errors.New("invalid token provided")
 }

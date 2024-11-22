@@ -15,9 +15,9 @@ func Register(c *gin.Context) {
 		return
 	}
 
-	userExist, err := model.FindOneBy(model.User{Email: input.Email})
+	userExist, err := model.FindOneUserBy(&model.User{Email: input.Email})
 
-	if err == nil || userExist.ID != 0 {
+	if err == nil || userExist != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "User already exists"})
 		return
 	}
